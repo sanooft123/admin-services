@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Booking Dashboard</h2>
+
+<form method="GET" class="filter-form">
+    <select name="status">
+        <option value="">All Status</option>
+        <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
+        <option value="Completed" {% if status_filter == 'Completed' %}selected{% endif %}>Completed</option>
+        <option value="Cancelled" {% if status_filter == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+    </select>
+    <input type="date" name="date" value="{{ date_filter or '' }}">
+    <button type="submit">Filter</button>
+</form>
+
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Service</th>
+        <th>Date</th>
+        <th>Status</th>
+        <th>Action</th>
+    </tr>
+    {% for b in bookings %}
+    <tr>
+        <td>{{ b.id }}</td>
+        <td>{{ b.name }}</td>
+        <td>{{ b.service }}</td>
+        <td>{{ b.date }}</td>
+        <td>{{ b.status }}</td>
+        <td>
+            <a href="{{ url_for('update_status', booking_id=b.id, new_status='Completed') }}" class="btn btn-success">✔</a>
+            <a href="{{ url_for('update_status', booking_id=b.id, new_status='Cancelled') }}" class="btn btn-danger">✖</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+<div class="pagination">
+    {% for i in range(1, total_pages + 1) %}
+        <a href="{{ url_for('dashboard', page=i, status=status_filter, date=date_filter) }}"
+           class="{% if i == current_page %}active{% endif %}">{{ i }}</a>
+    {% endfor %}
+</div>
+{% endblock %}
