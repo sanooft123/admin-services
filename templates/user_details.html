@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>User Details</h2>
+<p><strong>Name:</strong> {{ user.name }}</p>
+<p><strong>Phone:</strong> {{ user.phone }}</p>
+<p><strong>Email:</strong> {{ user.email }}</p>
+<p><strong>Status:</strong> {{ "Blocked" if user.is_blocked else "Active" }}</p>
+
+<h3>Bookings</h3>
+{% if bookings %}
+<table>
+<tr><th>ID</th><th>Service</th><th>Date</th><th>Status</th></tr>
+{% for b in bookings %}
+<tr>
+    <td>{{ b.id }}</td>
+    <td>{{ b.service }}</td>
+    <td>{{ b.date }}</td>
+    <td>{{ b.status }}</td>
+</tr>
+{% endfor %}
+</table>
+{% else %}
+<p>No bookings found.</p>
+{% endif %}
+{% endblock %}
