@@ -8,24 +8,39 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'supersecretkey')
 
 # -------------------- DATABASE CONFIG --------------------
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///admin.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///admin.db').replace("postgres://", "postgresql://")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # -------------------- MODELS --------------------
-class Booking(db.Model):
+class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
-    service = db.Column(db.String(100))
+    phone = db.Column(db.String(20))
+    email = db.Column(db.String(120))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    bookings = db.relationship("Booking", backref="user", lazy=True)
+
+class Booking(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    service_type = db.Column(db.String(100))
     date = db.Column(db.String(20))
-    status = db.Column(db.String(20), default='Pending')
+    time = db.Column(db.String(20))
+    location = db.Column(db.String(100))
+    package = db.Column(db.String(50))
+    addons = db.Column(db.String(200))
+    payment_method = db.Column(db.String(50))
+    payment_status = db.Column(db.String(20))
+    status = db.Column(db.String(20), default="Pending")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Admin(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True)
     password = db.Column(db.String(50))
 
-# -------------------- ROUTES --------------------
+# -------------------- AUTH --------------------
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -44,6 +59,7 @@ def logout():
     session.pop('admin_logged_in', None)
     return redirect(url_for('login'))
 
+# -------------------- DASHBOARD --------------------
 @app.route('/dashboard')
 def dashboard():
     if not session.get('admin_logged_in'):
@@ -73,35 +89,7 @@ def update_status(booking_id, new_status):
     db.session.commit()
     return redirect(url_for('dashboard'))
 
-# -------------------- API ENDPOINTS --------------------
-@app.route('/api/add_booking', methods=['POST'])
-def api_add_booking():
-    """Secure endpoint to receive bookings from services.com"""
-    auth_key = request.headers.get('Authorization')
-    if auth_key != os.getenv('ADMIN_API_KEY', 'mysupersecretkey123'):
-        return jsonify({"error": "Unauthorized"}), 401
-
-    data = request.get_json()
-    booking = Booking(
-        name=data['name'],
-        service=data['service'],
-        date=data.get('date', datetime.now().strftime('%Y-%m-%d')),
-        status=data.get('status', 'Pending')
-    )
-    db.session.add(booking)
-    db.session.commit()
-    return jsonify({"message": "Booking added successfully"}), 201
-
-@app.route('/api/bookings', methods=['GET'])
-def api_get_bookings():
-    """Optional: list all bookings"""
-    bookings = Booking.query.order_by(Booking.id.desc()).all()
-    return jsonify([
-        {"id": b.id, "name": b.name, "service": b.service, "date": b.date, "status": b.status}
-        for b in bookings
-    ])
-
-# -------------------- INITIALIZE DATABASE --------------------
+# -------------------- INITIAL SETUP --------------------
 with app.app_context():
     db.create_all()
     if not Admin.query.first():
